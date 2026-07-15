@@ -1,0 +1,39 @@
+name: Validate Docker Compose
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Create Dummy .env
+        run: |
+          cat > compose/.env <<EOF
+          DB_NAME=nextcloud
+          DB_USER=nextcloud
+          DB_PASSWORD=password
+          REDIS_PASSWORD=password
+          JWT_SECRET=secret
+          NEXTCLOUD_ADMIN_USER=admin
+          NEXTCLOUD_ADMIN_PASSWORD=password
+          EOF
+
+      - name: Validate Docker Compose
+        working-directory: compose
+        run: docker compose config
+
+      - name: Check YAML
+        run: |
+          docker compose -f compose/docker-compose.yml config > /dev/null
+
+      - name: Success
+        run: echo "Docker Compose validation successful."
