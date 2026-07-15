@@ -1,0 +1,38 @@
+# Runtime
+app/
+data/
+db/
+
+# Environment
+compose/.env
+
+# Backup
+*.sql
+*.sql.gz
+
+# Redis
+redis/*.rdb
+redis/*.aof
+
+# Logs
+*.log
+
+##############################
+# Temporary
+##############################
+
+tmp/
+cache/
+
+##############################
+# VSCode
+##############################
+
+.vscode/
+
+##############################
+# OS
+##############################
+
+.DS_Store
+Thumbs.db
