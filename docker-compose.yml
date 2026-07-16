@@ -1,0 +1,164 @@
+services:
+
+  mariadb:
+    image: mariadb:11
+    container_name: nextcloud-db
+    restart: unless-stopped
+
+    command:
+      - --transaction-isolation=READ-COMMITTED
+      - --binlog-format=ROW
+
+    env_file:
+      - .env
+
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Jakarta
+
+    volumes:
+      - /srv/nextcloud/db:/var/lib/mysql
+      - /srv/nextcloud/db/conf.d:/etc/mysql/conf.d
+
+    healthcheck:
+      test: ["CMD","healthcheck.sh","--connect"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+
+    networks:
+      - nextcloud
+
+    mem_limit: 2g
+
+  redis:
+    image: redis:7-alpine
+    container_name: nextcloud-redis
+    restart: unless-stopped
+
+    command:
+      - redis-server
+      - --appendonly
+      - yes
+
+    volumes:
+      - /srv/nextcloud/redis:/data
+
+    healthcheck:
+      test: ["CMD","redis-cli","ping"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - nextcloud
+
+    mem_limit: 512m
+
+  app:
+    image: nextcloud:34.0.1-apache
+    container_name: nextcloud
+
+    restart: unless-stopped
+
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+    env_file:
+      - .env
+
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_HOST: mariadb
+
+      REDIS_HOST: redis
+
+      PHP_MEMORY_LIMIT: 1024M
+      PHP_UPLOAD_LIMIT: 20G
+
+      TZ: Asia/Jakarta
+
+    ports:
+      - "8081:80"
+
+    volumes:
+      - /srv/nextcloud/app:/var/www/html
+      - /srv/nextcloud/data:/var/www/html/data
+      - /srv/nextcloud/php/opcache.ini:/usr/local/etc/php/conf.d/opcache.ini:ro
+
+      # Existing SMB Share
+      - /srv/samba:/mnt/samba:rw
+
+    healthcheck:
+      test: ["CMD","curl","-f","http://localhost/status.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
+    networks:
+      - nextcloud
+
+    mem_limit: 2g
+
+  cron:
+    image: nextcloud:34.0.1-apache
+    container_name: nextcloud-cron
+
+    restart: unless-stopped
+
+    depends_on:
+      - app
+
+    entrypoint: /cron.sh
+
+    volumes:
+      - /srv/nextcloud/app:/var/www/html
+      - /srv/nextcloud/data:/var/www/html/data
+
+    networks:
+      - nextcloud
+
+  onlyoffice:
+    image: onlyoffice/documentserver:9.4
+
+    container_name: onlyoffice
+
+    restart: unless-stopped
+
+    environment:
+      JWT_ENABLED: "true"
+      JWT_SECRET: ${ONLYOFFICE_JWT_SECRET}
+      JWT_HEADER: Authorization
+      TZ: Asia/Jakarta
+
+    ports:
+      - "8082:80"
+
+    volumes:
+      - /srv/nextcloud/onlyoffice/data:/var/www/onlyoffice/Data
+      - /srv/nextcloud/onlyoffice/logs:/var/log/onlyoffice
+      - /srv/nextcloud/onlyoffice/lib:/var/lib/onlyoffice
+
+    healthcheck:
+      test: ["CMD","curl","-f","http://localhost/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
+    networks:
+      - nextcloud
+
+    mem_limit: 2g
+
+networks:
+  nextcloud:
+    driver: bridge
