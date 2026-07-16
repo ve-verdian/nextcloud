@@ -380,6 +380,8 @@ config.php
 # atau
 docker exec -u www-data nextcloud php occ status
 docker exec -u www-data nextcloud php occ config:system:set trusted_domains 4 --value=192.168.105.9
+docker exec -u www-data nextcloud php occ config:system:set overwritehost --value="192.168.105.9:8081"
+docker exec -u www-data nextcloud php occ config:system:set overwrite.cli.url --value="http://192.168.105.9:8081"
 docker exec nextcloud php occ config:list system
 ```
 
