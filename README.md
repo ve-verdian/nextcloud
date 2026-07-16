@@ -360,6 +360,29 @@ Matikan maintenance mode:
 docker exec -u www-data nextcloud php occ maintenance:mode --off
 ```
 
+```bash
+# Compress directory folder
+sudo tar -czvf nextcloud-prd.tar.gz /srv/nextcloud 
+
+sudo rsync -avhP --info=progress2 \
+-e "ssh -p 22" \
+/srv/nextcloud/nextcloud-prd.tar.gz \
+user@IP:/home/user/
+
+# Verification permission
+sudo chown -R 33:33 /srv/nextcloud/data
+sudo chown -R 999:999 /srv/nextcloud/db
+
+# Kalau IP berubah
+cukup edit
+config.php
+
+# atau
+docker exec -u www-data nextcloud php occ status
+docker exec -u www-data nextcloud php occ config:system:set trusted_domains 4 --value=192.168.105.9
+docker exec nextcloud php occ config:list system
+```
+
 Upgrade
 
 ```
